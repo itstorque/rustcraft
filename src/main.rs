@@ -1,4 +1,8 @@
 use glow::*;
+use std::str;
+
+const VERTEX_SHADER_SOURCE: &str = &include_str!("shaders/vertex.hlsl");
+const FRAGMENT_SHADER_SOURCE: &str = &include_str!("shaders/fragment.hlsl");
 
 fn main() {
     unsafe {
@@ -129,19 +133,3 @@ unsafe fn set_uniform(gl: &glow::Context, program: NativeProgram, name: &str, va
     // See also `uniform_n_i32`, `uniform_n_u32`, `uniform_matrix_4_f32_slice` etc.
     gl.uniform_1_f32(uniform_location.as_ref(), value)
 }
-
-const VERTEX_SHADER_SOURCE: &str = r#"#version 130
-  in vec2 in_position;
-  out vec2 position;
-  void main() {
-    position = in_position;
-    gl_Position = vec4(in_position - 0.5, 0.0, 1.0);
-  }"#;
-const FRAGMENT_SHADER_SOURCE: &str = r#"#version 130
-  precision mediump float;
-  in vec2 position;
-  out vec4 color;
-  uniform float blue;
-  void main() {
-    color = vec4(position, blue, 1.0);
-  }"#;
