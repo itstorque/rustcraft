@@ -1,8 +1,13 @@
 use glow::*;
 use std::str;
 
-const VERTEX_SHADER_SOURCE: &str = &include_str!("shaders/vertex.hlsl");
-const FRAGMENT_SHADER_SOURCE: &str = &include_str!("shaders/fragment.hlsl");
+mod graphics;
+use graphics::shaders::{ShaderManager, Shader};
+
+mod util;
+
+const VERTEX_SHADER_SOURCE: &str = &include_str!("graphics/shaders/vertex.hlsl");
+const FRAGMENT_SHADER_SOURCE: &str = &include_str!("graphics/shaders/fragment.hlsl");
 
 fn main() {
     unsafe {
@@ -10,8 +15,8 @@ fn main() {
         let (gl, window, mut events_loop, _context) = create_sdl2_context();
 
         // Create a shader program from source
-        let program = create_program(&gl, VERTEX_SHADER_SOURCE, FRAGMENT_SHADER_SOURCE);
-        gl.use_program(Some(program));
+        let mut shader_manager = ShaderManager::new(&gl);
+        shader_manager.load(&gl, Shader::Example);
 
         // Create a vertex buffer and vertex array object
         let (vbo, vao) = create_vertex_buffer(&gl);
