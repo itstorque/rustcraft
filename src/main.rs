@@ -1,10 +1,9 @@
+mod graphics;
+mod util;
+
 use glow::*;
 use std::str;
-
-mod graphics;
 use graphics::shaders::{ShaderManager, Shader};
-
-mod util;
 
 const VERTEX_SHADER_SOURCE: &str = &include_str!("graphics/shaders/vertex.hlsl");
 const FRAGMENT_SHADER_SOURCE: &str = &include_str!("graphics/shaders/fragment.hlsl");
@@ -15,14 +14,14 @@ fn main() {
         let (gl, window, mut events_loop, _context) = create_sdl2_context();
 
         // Create a shader program from source
-        let mut shader_manager = ShaderManager::new(&gl);
-        shader_manager.load(&gl, Shader::Example);
+        let shader_manager = ShaderManager::new(&gl);
+        shader_manager.load_example();
+
+        // Upload uniforms
+        shader_manager.set_uniforms(Shader::Example(0.8));
 
         // Create a vertex buffer and vertex array object
         let (vbo, vao) = create_vertex_buffer(&gl);
-
-        // Upload some uniforms
-        set_uniform(&gl, program, "blue", 0.8);
 
         gl.clear_color(0.1, 0.2, 0.3, 1.0);
 
@@ -41,7 +40,6 @@ fn main() {
         }
 
         // Clean up
-        gl.delete_program(program);
         gl.delete_vertex_array(vao);
         gl.delete_buffer(vbo)
     }
@@ -71,46 +69,6 @@ unsafe fn create_sdl2_context() -> (
     (gl, window, event_loop, gl_context)
 }
 
-unsafe fn create_program(
-    gl: &glow::Context,
-    vertex_shader_source: &str,
-    fragment_shader_source: &str,
-) -> NativeProgram {
-    let program = gl.create_program().expect("Cannot create program");
-
-    let shader_sources = [
-        (glow::VERTEX_SHADER, vertex_shader_source),
-        (glow::FRAGMENT_SHADER, fragment_shader_source),
-    ];
-
-    let mut shaders = Vec::with_capacity(shader_sources.len());
-
-    for (shader_type, shader_source) in shader_sources.iter() {
-        let shader = gl
-            .create_shader(*shader_type)
-            .expect("Cannot create shader");
-        gl.shader_source(shader, shader_source);
-        gl.compile_shader(shader);
-        if !gl.get_shader_compile_status(shader) {
-            panic!("{}", gl.get_shader_info_log(shader));
-        }
-        gl.attach_shader(program, shader);
-        shaders.push(shader);
-    }
-
-    gl.link_program(program);
-    if !gl.get_program_link_status(program) {
-        panic!("{}", gl.get_program_info_log(program));
-    }
-
-    for shader in shaders {
-        gl.detach_shader(program, shader);
-        gl.delete_shader(shader);
-    }
-
-    program
-}
-
 unsafe fn create_vertex_buffer(gl: &glow::Context) -> (NativeBuffer, NativeVertexArray) {
     // This is a flat array of f32s that are to be interpreted as vec2s.
     let triangle_vertices = [0.5f32, 1.0f32, 0.0f32, 0.0f32, 1.0f32, 0.0f32];
@@ -131,10 +89,4 @@ unsafe fn create_vertex_buffer(gl: &glow::Context) -> (NativeBuffer, NativeVerte
     gl.vertex_attrib_pointer_f32(0, 2, glow::FLOAT, false, 8, 0);
 
     (vbo, vao)
-}
-
-unsafe fn set_uniform(gl: &glow::Context, program: NativeProgram, name: &str, value: f32) {
-    let uniform_location = gl.get_uniform_location(program, name);
-    // See also `uniform_n_i32`, `uniform_n_u32`, `uniform_matrix_4_f32_slice` etc.
-    gl.uniform_1_f32(uniform_location.as_ref(), value)
 }

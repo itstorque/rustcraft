@@ -1,16 +1,14 @@
 use glow::*;
-use std::collections::HashMap;
+use std::ops::Drop;
 
-
-pub struct ShaderManager {
-    shader_up: Option<Shader>,
+pub struct ShaderManager<'a> {
+    gl: &'a glow::Context,
     example_shader: NativeProgram,
 }
 
 /// Enumerates all the shaders we have coded
 pub enum Shader {
     Example(f32),
-    Example2(f32, f32, f32),
 }
 
 impl Shader {
@@ -22,12 +20,21 @@ impl Shader {
             ]
         }
     }
+
+    fn set_uniforms(self, gl: &glow::Context, program: NativeProgram) {
+        unsafe{
+            match self {
+                Self::Example(blue) => {
+                    gl.uniform_1_f32(gl.get_uniform_location(program, "blue").as_ref(), blue);
+                },
+            }
+        }
+    }
 }
 
 
-impl ShaderManager {
-    pub fn new(gl: &glow::Context) -> ShaderManager {
-        let mut shader_programs = HashMap::new();
+impl<'a> ShaderManager<'a> {
+    pub fn new(gl: &'a glow::Context) -> ShaderManager<'a> {
 
         // Initialize the example shader
         let example_shader = Self::init_shader(gl, vec![
@@ -35,33 +42,33 @@ impl ShaderManager {
             (glow::FRAGMENT_SHADER, &include_str!("fragment.hlsl"))
         ]);
 
-        ShaderManager { shader_up: None, example_shader }
+        ShaderManager { gl, example_shader }
     }
 
-    pub fn load(&mut self, gl: &glow::Context, shader: Shader) {
-        
-        self.shader_up = Some(shader);
+    pub fn load_example(&self) {
+        unsafe {
+            self.gl.use_program(Some(self.example_shader));
+        }
     }
 
-    pub update_uniforms(&mut self, shader: Shader) {
-
+    pub fn set_uniforms(&self, shader: Shader) {
+        shader.set_uniforms(self.gl, self.example_shader);
     }
 
     /// Create a program id for a shader
-    fn init_shader(gl: &glow::Context, shader_src: Vec<(u32, &'static str)>) -> NativeProgram {
-        // Make program
-        unsafe {
-            let program = gl.create_program().expect("Cannot create program");
-        }
-                
-        // Make shader
+    fn init_shader(gl: &'a glow::Context, shader_src: Vec<(u32, &'static str)>) -> NativeProgram {
         let mut shaders = Vec::with_capacity(shader_src.len());
+        
         unsafe {
-            for (shader_type, shader_source) in shader_sources.iter() {
+            // Make program
+            let program = gl.create_program().expect("Cannot create program");
+
+            // Load in shaders
+            for (shader_type, shader_source) in shader_src.iter() {
                 let shader = gl
                     .create_shader(*shader_type)
                     .expect("Cannot create shader");
-                gl.shader_source(shader, shader_source);
+                    gl.shader_source(shader, shader_source);
                 gl.compile_shader(shader);
                 if !gl.get_shader_compile_status(shader) {
                     panic!("{}", gl.get_shader_info_log(shader));
@@ -83,6 +90,14 @@ impl ShaderManager {
             }
 
             program
+        }
+    }
+}
+
+impl<'a> Drop for ShaderManager<'a> {
+    fn drop(&mut self) {
+        unsafe {
+            self.gl.delete_program(self.example_shader);
         }
     }
 }
