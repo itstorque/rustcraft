@@ -130,14 +130,16 @@ unsafe fn set_uniform(gl: &glow::Context, program: NativeProgram, name: &str, va
     gl.uniform_1_f32(uniform_location.as_ref(), value)
 }
 
-const VERTEX_SHADER_SOURCE: &str = r#"#version 130
+const VERTEX_SHADER_SOURCE: &str = r#"
+  #version 410
   in vec2 in_position;
   out vec2 position;
   void main() {
     position = in_position;
     gl_Position = vec4(in_position - 0.5, 0.0, 1.0);
   }"#;
-const FRAGMENT_SHADER_SOURCE: &str = r#"#version 130
+const FRAGMENT_SHADER_SOURCE: &str = r#"
+  #version 410
   precision mediump float;
   in vec2 position;
   out vec4 color;
